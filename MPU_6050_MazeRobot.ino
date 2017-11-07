@@ -26,7 +26,6 @@ int turnDistance = 20;
 
 #define INTERRUPT_PIN 2
 #define LED_PIN 13
-bool blinkState = false;
 
 MPU6050 mpu;
 
@@ -113,7 +112,8 @@ void setup() {
         Serial.print(devStatus);
         Serial.println(F(")"));
     }
-    
+
+    blink(1);
     Serial.println("Waiting for offsets to calculate...");
     for(int i = 0; i < 1850; i++) {
       while (!mpuInterrupt && fifoCount < packetSize);
@@ -134,6 +134,14 @@ void setup() {
     
     pingTimer = millis();
 
+    blink(2);
+    while((ypr[1] * 180/M_PI) - startPitch < 5) {
+      while (!mpuInterrupt && fifoCount < packetSize);
+      updateMPU6050();
+    }
+    blink(3);
+    delay(3000);
+    digitalWrite(LED_PIN, true);
 }
 
 void loop() {
@@ -212,9 +220,6 @@ void updateMPU6050() {
       mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
       currentYaw = (ypr[0] * 180/M_PI) - startYaw;
-      
-      blinkState = !blinkState;
-      digitalWrite(LED_PIN, blinkState);
   }
 }
 
@@ -250,5 +255,14 @@ void drive(float turnAmt, float speed) { //turnAmt from -255 to 255, speed from 
   }
   leftMotor.drive(left);
   rightMotor.drive(right);
+}
+
+void blink(int times) {
+  for(int i = 0; i < times; i++) {
+    digitalWrite(LED_PIN, true);
+    delay(100);
+    digitalWrite(LED_PIN, false);
+    delay(100); 
+  }
 }
 
