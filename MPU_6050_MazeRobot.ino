@@ -22,7 +22,7 @@ NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
 unsigned int pingSpeed = 25; //ultrasonic refresh rate in ms
 unsigned long pingTimer;
 double distance = 100;
-int turnDistance = 20;
+int turnDistance = 25;
 
 #define INTERRUPT_PIN 2
 #define LED_PIN 13
@@ -56,10 +56,10 @@ void dmpDataReady() {
 
 double Setpoint, Input, Output;
 
-double Kp=15, Ki=0, Kd=1.4;
+double Kp=10, Ki=0, Kd=1.4;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
-int maze[] = {180, 180, 180};
+int maze[] = {90, 90, 90, -90, -90, 90, 90};
 int segment = 0;
 bool turning = false;
 
@@ -129,17 +129,17 @@ void setup() {
 
     Setpoint = 0;
     myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(-200, 200);
+    myPID.SetOutputLimits(-180, 180);
     myPID.SetSampleTime(4); // looptime in ms (4ms = 250hz)
     
     pingTimer = millis();
 
-    blink(2);
-    while((ypr[1] * 180/M_PI) - startPitch < 5) {
-      while (!mpuInterrupt && fifoCount < packetSize);
-      updateMPU6050();
-    }
-    blink(3);
+    blink(5);
+//    while((ypr[2] * 180/M_PI) - startRoll < 5) {
+//      while (!mpuInterrupt && fifoCount < packetSize);
+//      updateMPU6050();
+//    }
+//    blink(3);
     delay(3000);
     digitalWrite(LED_PIN, true);
 }
@@ -174,15 +174,11 @@ void loop() {
 //    }
     
 
-   drive(Output, 100);
-    Serial.print("Yaw: ");
-    Serial.print(Input); 
-
-    Serial.print(" Setpoint: ");
-    Serial.println(Setpoint);
+    drive(Output, 100);
+    Serial.println((ypr[2] * 180/M_PI) - startRoll);
     if(!turning) {
       if(distance < turnDistance) {
-        if(segment == 3) {
+        if(segment == 8) {
           segment = 0;
         }
         Setpoint += maze[segment];
