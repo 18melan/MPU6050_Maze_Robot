@@ -19,7 +19,7 @@ Motor rightMotor = Motor(BIN1, BIN2, PWMB, -1, STBY);
 #define ECHO_PIN 11
 #define MAX_DISTANCE 300
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
-unsigned int pingSpeed = 25; //ultrasonic refresh rate in ms
+unsigned int pingSpeed = 22; //ultrasonic refresh rate in ms
 unsigned long pingTimer;
 double distance = 300;
 
@@ -59,12 +59,11 @@ double Kp=18, Ki=0, Kd=4.6;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 int maze[] = {90, 90, 90, -90, -90, 90, 90};
-int turnDistance = 23;
+int turnDistance = 28;
 int segment = 0;
 bool turning = true;
 
-long clockStart;
-long previousMillis = 0;
+long previousMillis = 0;  
 long interval = 1000;
 
 void setup() {
@@ -114,6 +113,7 @@ void setup() {
         Serial.println(F(")"));
     }
 
+    blink(3);
     Serial.println("Waiting for offsets to calculate...");
     for(int i = 0; i < 1850; i++) {
       while (!mpuInterrupt && fifoCount < packetSize);
@@ -129,12 +129,18 @@ void setup() {
 
     Setpoint = 0;
     myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(-240, 240);
+    myPID.SetOutputLimits(-255, 255);
     myPID.SetSampleTime(4); // looptime in ms (4ms = 250hz)
     
     pingTimer = millis();
 
     blink(5);
+//    while((ypr[2] * 180/M_PI) - startRoll < 5) {
+//      while (!mpuInterrupt && fifoCount < packetSize);
+//      updateMPU6050();
+//    }
+//    blink(3);
+//    delay(3000);
     digitalWrite(LED_PIN, true);
 }
 
@@ -165,8 +171,7 @@ void loop() {
 //    }
     
 
-    drive(Output, getSpeed(distance));
-    
+    drive(Output, getSpeed(distance)); //190);
     Serial.println((ypr[2] * 180/M_PI) - startRoll);
     if(!turning) {
       if(distance < turnDistance) {
@@ -185,13 +190,12 @@ void loop() {
       turning = false;
     }
   }
-  
-  if (millis() >= pingTimer) {   // pingSpeed milliseconds since last ping, do another ping.
-    pingTimer += pingSpeed;      // Set the next ping time.
-    sonar.ping_timer(updateSonar); // Send out the ping, calls "echoCheck" function every 24uS where you can check the ping status.
-  }
-  
-  
+
+    if (millis() >= pingTimer) {   // pingSpeed milliseconds since last ping, do another ping.
+      pingTimer += pingSpeed;      // Set the next ping time.
+      sonar.ping_timer(updateSonar); // Send out the ping, calls "echoCheck" function every 24uS where you can check the ping status.
+    }
+ 
   updateMPU6050();
 }
 
@@ -227,9 +231,9 @@ void updateSonar() {
 }
 
 double getSpeed(double distance) {
-  float s = 1.71*distance;
-  if(s > 230 || distance > 35) {
-    return 230;
+  float s = 1.7*distance + 10;
+  if(s > 255 || distance > 35) { //distance > 35
+    return 255;
   }
   
   return s;
@@ -257,9 +261,9 @@ void drive(float turnAmt, float speed) { //turnAmt from -255 to 255, speed from 
 void blink(int times) {
   for(int i = 0; i < times; i++) {
     digitalWrite(LED_PIN, true);
-    delay(150);
+    delay(200);
     digitalWrite(LED_PIN, false);
-    delay(150); 
+    delay(200); 
   }
 }
 
