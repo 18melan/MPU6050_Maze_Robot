@@ -19,10 +19,9 @@ Motor rightMotor = Motor(BIN1, BIN2, PWMB, -1, STBY);
 #define ECHO_PIN 11
 #define MAX_DISTANCE 300
 NewPing sonar(TRIGGER_PIN, ECHO_PIN, MAX_DISTANCE);
-unsigned int pingSpeed = 25; //ultrasonic refresh rate in ms
+unsigned int pingSpeed = 22; //ultrasonic refresh rate in ms
 unsigned long pingTimer;
-double distance = 100;
-int turnDistance = 25;
+double distance = 300;
 
 #define INTERRUPT_PIN 2
 #define LED_PIN 13
@@ -56,15 +55,16 @@ void dmpDataReady() {
 
 double Setpoint, Input, Output;
 
-double Kp=10, Ki=0, Kd=1.4;
+double Kp=18, Ki=0, Kd=4.6;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 int maze[] = {90, 90, 90, -90, -90, 90, 90};
+int turnDistance = 25;
 int segment = 0;
-bool turning = false;
+bool turning = true;
 
 long previousMillis = 0;  
-long interval = 1500;
+long interval = 1000;
 
 void setup() {
     Wire.begin();
@@ -113,7 +113,7 @@ void setup() {
         Serial.println(F(")"));
     }
 
-    blink(1);
+    blink(3);
     Serial.println("Waiting for offsets to calculate...");
     for(int i = 0; i < 1850; i++) {
       while (!mpuInterrupt && fifoCount < packetSize);
@@ -129,7 +129,7 @@ void setup() {
 
     Setpoint = 0;
     myPID.SetMode(AUTOMATIC);
-    myPID.SetOutputLimits(-180, 180);
+    myPID.SetOutputLimits(-250, 250);
     myPID.SetSampleTime(4); // looptime in ms (4ms = 250hz)
     
     pingTimer = millis();
@@ -140,7 +140,7 @@ void setup() {
 //      updateMPU6050();
 //    }
 //    blink(3);
-    delay(3000);
+//    delay(3000);
     digitalWrite(LED_PIN, true);
 }
 
@@ -161,10 +161,7 @@ void loop() {
     myPID.Compute();
 
     //Serial.println(getSpeed(distance));
-    if (millis() >= pingTimer) {   // pingSpeed milliseconds since last ping, do another ping.
-      pingTimer += pingSpeed;      // Set the next ping time.
-      sonar.ping_timer(updateSonar); // Send out the ping, calls "echoCheck" function every 24uS where you can check the ping status.
-    }
+
 
 //    unsigned long currentMillis = millis();
 //    if(currentMillis - previousMillis > interval) {
@@ -174,12 +171,15 @@ void loop() {
 //    }
     
 
-    drive(Output, 100);
+    drive(Output, getSpeed(distance)); //190);
     Serial.println((ypr[2] * 180/M_PI) - startRoll);
     if(!turning) {
       if(distance < turnDistance) {
-        if(segment == 8) {
-          segment = 0;
+        int lastSegment = sizeof(maze);
+        if(segment == lastSegment) {
+          leftMotor.brake();
+          rightMotor.brake();
+          while(true);
         }
         Setpoint += maze[segment];
         segment++;
@@ -190,6 +190,11 @@ void loop() {
       turning = false;
     }
   }
+
+    if (millis() >= pingTimer) {   // pingSpeed milliseconds since last ping, do another ping.
+      pingTimer += pingSpeed;      // Set the next ping time.
+      sonar.ping_timer(updateSonar); // Send out the ping, calls "echoCheck" function every 24uS where you can check the ping status.
+    }
  
   updateMPU6050();
 }
@@ -225,14 +230,14 @@ void updateSonar() {
   }
 }
 
-//double getSpeed(double distance) {
-//  float s = distance + 20;
-//  if(s > 100 || distance > 40) {
-//    return 100;
-//  }
-//  
-//  return s;
-//}
+double getSpeed(double distance) {
+  float s = 1.8*distance + 10;
+  if(s > 190 || distance > 35) {
+    return 190;
+  }
+  
+  return s;
+}
 
 void drive(float turnAmt, float speed) { //turnAmt from -255 to 255, speed from 0 to 255
   float left, right;
@@ -256,9 +261,9 @@ void drive(float turnAmt, float speed) { //turnAmt from -255 to 255, speed from 
 void blink(int times) {
   for(int i = 0; i < times; i++) {
     digitalWrite(LED_PIN, true);
-    delay(100);
+    delay(200);
     digitalWrite(LED_PIN, false);
-    delay(100); 
+    delay(200); 
   }
 }
 
