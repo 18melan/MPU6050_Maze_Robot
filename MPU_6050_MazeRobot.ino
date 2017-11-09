@@ -58,10 +58,13 @@ double Setpoint, Input, Output;
 double Kp=18, Ki=0, Kd=4.6;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
+
 int maze[] = {90, 90, 90, -90, -90, 90, 90};
+int maze2[] = {90, 90};
 int turnDistance = 22;
 int segment = 0;
 bool turning = true;
+bool top_maze = true; //false for long route
 
 long previousMillis = 0;  
 long interval = 1000;
@@ -132,15 +135,25 @@ void setup() {
     myPID.SetOutputLimits(-255, 255);
     myPID.SetSampleTime(4); // looptime in ms (4ms = 250hz)
     
-    
-
     blink(3);
     unsigned long t = millis();
-    while(millis() < t + 3000) {
+    while(millis() < t + 4000) {
       while (!mpuInterrupt && fifoCount < packetSize);
       updateMPU6050();
     }
     blink(1);
+
+    if(top_maze) {
+      while((ypr[2] * 180/M_PI) - startRoll > 0.2) {
+        while (!mpuInterrupt && fifoCount < packetSize) {
+          myPID.Compute();
+          drive(Output, 150);
+        }
+        
+        updateMPU6050();
+      }
+      Setpoint += 90;
+    }
     
     digitalWrite(LED_PIN, true);
     pingTimer = millis();
@@ -162,9 +175,6 @@ void loop() {
 
     myPID.Compute();
 
-    //Serial.println(getSpeed(distance));
-
-
 //    unsigned long currentMillis = millis();
 //    if(currentMillis - previousMillis > interval) {
 //      previousMillis = currentMillis; 
@@ -172,16 +182,22 @@ void loop() {
 //      
 //    }
     
+    drive(Output, getSpeed(distance));
 
-    drive(Output, getSpeed(distance)); //190);
-    Serial.println((ypr[2] * 180/M_PI) - startRoll);
     if(!turning) {
       if(distance < turnDistance) {
-        int lastSegment = sizeof(maze);
-        if(segment == lastSegment) {
-          
+//        int lastSegment = sizeof(maze);
+//        if(segment == lastSegment) {
+//          
+//        }
+
+        if(top_maze) {
+          Setpoint += maze2[segment];
         }
-        Setpoint += maze[segment];
+        else {
+          Setpoint += maze[segment];
+        }
+        
         segment++;
         turning = true;
       }
