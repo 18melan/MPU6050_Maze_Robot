@@ -59,7 +59,7 @@ double Kp=18, Ki=0, Kd=4.6;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 int maze[] = {90, 90, 90, -90, -90, 90, 90};
-int turnDistance = 28;
+int turnDistance = 22;
 int segment = 0;
 bool turning = true;
 
@@ -132,16 +132,18 @@ void setup() {
     myPID.SetOutputLimits(-255, 255);
     myPID.SetSampleTime(4); // looptime in ms (4ms = 250hz)
     
-    pingTimer = millis();
+    
 
-    blink(5);
-//    while((ypr[2] * 180/M_PI) - startRoll < 5) {
-//      while (!mpuInterrupt && fifoCount < packetSize);
-//      updateMPU6050();
-//    }
-//    blink(3);
-//    delay(3000);
+    blink(3);
+    unsigned long t = millis();
+    while(millis() < t + 3000) {
+      while (!mpuInterrupt && fifoCount < packetSize);
+      updateMPU6050();
+    }
+    blink(1);
+    
     digitalWrite(LED_PIN, true);
+    pingTimer = millis();
 }
 
 void loop() {
@@ -177,16 +179,14 @@ void loop() {
       if(distance < turnDistance) {
         int lastSegment = sizeof(maze);
         if(segment == lastSegment) {
-          leftMotor.brake();
-          rightMotor.brake();
-          while(true);
+          
         }
         Setpoint += maze[segment];
         segment++;
         turning = true;
       }
     }
-    if(distance > turnDistance+10) {
+    if(distance > turnDistance + 10) { //10
       turning = false;
     }
   }
@@ -231,8 +231,8 @@ void updateSonar() {
 }
 
 double getSpeed(double distance) {
-  float s = 1.7*distance + 10;
-  if(s > 255 || distance > 35) { //distance > 35
+  float s = 1.8*distance + 30;
+  if(s > 255 || distance > 42) { //distance > 35
     return 255;
   }
   
