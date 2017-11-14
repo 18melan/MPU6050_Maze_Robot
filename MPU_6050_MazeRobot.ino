@@ -45,7 +45,7 @@ VectorFloat gravity;    // [x, y, z]            gravity vector
 float euler[3];         // [psi, theta, phi]    Euler angle container
 float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 float startYaw, startPitch, startRoll;
-float currentYaw;
+float currentYaw, currentRoll;
 
 // interrupt detection routine
 volatile bool mpuInterrupt = false; // indicates whether MPU interrupt pin has gone high
@@ -54,14 +54,13 @@ void dmpDataReady() {
 }
 
 double Setpoint, Input, Output;
-//double Kp=18, Ki=0, Kd=4.6;
-double Kp=10, Ki=0, Kd=3;
+double Kp=18, Ki=0, Kd=4.6;
 PID myPID(&Input, &Output, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 
 int maze[] = {90, 90, 90, -90, -90, 90, 90, -179, -91, -90, 90, 90, 90, 90, -90, -90, 90, 90};
 int maze2[] = {90, 90}; //top maze
-int turnDistance = 20; //22
+int turnDistance = 24; //22
 int segment = 0;
 bool turning = true;
 bool top_maze = false; //false for long route
@@ -145,7 +144,7 @@ void setup() {
     
     if(top_maze) {
       myPID.SetTunings(8, 0, 2);
-      while((ypr[2] * 180/M_PI) - startRoll > 0.2) {
+      while(currentRoll > 0.2) {
         while (!mpuInterrupt && fifoCount < packetSize) {
           Input = currentYaw;
           myPID.Compute();
@@ -198,10 +197,14 @@ void loop() {
         segment++;
         turnTimer = millis();
         turning = true;
+        myPID.SetTunings(9.5, 0, 3.5); //10, 3.5
+        myPID.SetOutputLimits(-225, 225);
       }
     }
     if(millis() >= turnTimer + 500) { //500ms allowed for turning
       turning = false;
+      myPID.SetTunings(Kp, Ki, Kd);
+      myPID.SetOutputLimits(-255, 255);
     }
   }
 
@@ -235,6 +238,7 @@ void updateMPU6050() {
       mpu.dmpGetGravity(&gravity, &q);
       mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
       currentYaw = (ypr[0] * 180/M_PI) - startYaw;
+      currentRoll = (ypr[2] * 180/M_PI) - startRoll;
   }
 }
 
@@ -245,14 +249,16 @@ void updateSonar() {
 }
 
 double getSpeed(double distance) {
-  float s = 1.7*distance + 35; //1.8*distance + 30;
-  if(s > 255 || distance > 52) { //distance > 35
-    return 255;
-  }
+  float s = 1.7*distance + 40; //1.7*distance + 35;
   if(turning) {
     return 0;
   }
-  
+//  if(currentRoll < -0.35) {
+////    return 180;
+//  }
+  if(s > 255 || distance > 52) { //distance > 35
+    return 255;
+  }
   return s;
 }
 
